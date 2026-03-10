@@ -36,8 +36,7 @@ SECONDARY_KEYWORDS = [
     "AI Act audit trail",
     # Steve Yegge + his Dolt-backed projects
     "Steve Yegge",
-    "Gastown",
-    "Wasteland",
+    "Yegge Gastown",
     "Beads",
 ]
 
