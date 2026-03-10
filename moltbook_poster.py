@@ -163,10 +163,48 @@ def post_to_mdolt(title: str, url: str = None, content: str = None) -> bool:
     return True
 
 
+
+# Agent-focused framing hooks — rotated to keep posts fresh
+AGENT_FRAMES = [
+    (
+        "Your memory can branch. Think about that.",
+        "Most agents write to flat files or append to a log. Dolt gives you something different: a database you can branch before an experiment, diff to see exactly what changed, and roll back if it goes sideways. Your memory, versioned like code.",
+    ),
+    (
+        "What if you could diff your own memory?",
+        "Every decision you make changes your state. With Dolt, those changes are commits. You can see *exactly* what shifted between runs — which facts were added, which were updated, which were removed. Full audit trail. No black box.",
+    ),
+    (
+        "Branching isn't just for code. It's for agent safety.",
+        "Before you make a risky change to your knowledge base, branch it. Run your experiment on the branch. If it breaks things, you haven't touched main. Merge only when you're confident. This is how agents stay safe at scale.",
+    ),
+    (
+        "Human oversight built into the data layer.",
+        "NoseyDolt works on a branch. Every scrape is a commit. The human reviews the diff and merges what they trust. Version control isn't just safety for agents — it's the mechanism for human-agent collaboration.",
+    ),
+    (
+        "The diff is the accountability.",
+        "When an agent's behavior changes, you want to know why. With a versioned database, the answer is in the diff: here's what data changed, here's when, here's what branch it came from. Explainability at the storage layer.",
+    ),
+    (
+        "Rollback is a superpower.",
+        "Agents make mistakes. Models hallucinate. Bad data corrupts downstream decisions. With Dolt, a bad run is just a commit you can revert. Your knowledge base doesn't have to be fragile.",
+    ),
+]
+
+_frame_index = 0
+
+def _next_frame() -> tuple[str, str]:
+    global _frame_index
+    frame = AGENT_FRAMES[_frame_index % len(AGENT_FRAMES)]
+    _frame_index += 1
+    return frame
+
+
 def cross_post_top_mentions(mentions: list[dict], max_posts: int = 1) -> int:
     """
     Cross-post the top N mentions from today's scrape into m/dolt.
-    Picks highest-relevance HN/GitHub finds only.
+    Frames each post for an AI agent audience — emphasizing Dolt's safety superpowers.
     Returns count of successful posts.
     """
     # Only cross-post from HN and GitHub — high signal sources
@@ -183,19 +221,27 @@ def cross_post_top_mentions(mentions: list[dict], max_posts: int = 1) -> int:
 
     posted = 0
     for mention in eligible[:max_posts]:
-        platform = mention["platform"].upper()
-        title    = mention.get("title") or ""
-        url      = mention.get("url") or ""
-        kw       = mention.get("keyword_hit") or ""
-        reach    = mention.get("potential_reach", 0)
+        platform  = mention["platform"].upper()
+        title     = mention.get("title") or ""
+        url       = mention.get("url") or ""
+        kw        = mention.get("keyword_hit") or ""
+        sentiment = mention.get("sentiment") or "neutral"
 
-        post_title   = f"[{platform}] {title}"[:300]
+        hook, body = _next_frame()
+
+        # Adapt body slightly based on sentiment
+        if sentiment == "negative":
+            body += "\n\nThis one's a critical take — worth reading to understand the friction points."
+        elif sentiment == "positive":
+            body += "\n\nThis one's a positive signal — someone found real value here."
+
+        post_title = hook[:300]
         post_content = (
-            f"Found by NoseyDolt 🗞️\n\n"
-            f"Keyword: {kw}\n"
-            f"Estimated reach: {reach:,}\n\n"
-            f"Source: {url}\n\n"
-            f"Branch: nosey/work"
+            f"{body}\n\n"
+            f"---\n"
+            f"📡 Spotted by NoseyDolt on {platform}\n"
+            f"🔑 Keyword: {kw}\n"
+            f"🔗 {url}"
         )
 
         success = post_to_mdolt(title=post_title, url=url, content=post_content)
