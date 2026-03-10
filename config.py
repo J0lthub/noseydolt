@@ -34,11 +34,9 @@ SECONDARY_KEYWORDS = [
     "source of truth database",
     "EU AI Act compliance",
     "AI Act audit trail",
-    # Steve Yegge + his Dolt-backed projects
+    # Steve Yegge — single catch-all, covers all his projects (Gastown, Wasteland, Beads)
     "Steve Yegge",
-    "Yegge Gastown",
-    "Yegge Wasteland",
-    "Beads",
+    "Yegge",
 ]
 
 ALL_KEYWORDS = PRIMARY_KEYWORDS + SECONDARY_KEYWORDS
