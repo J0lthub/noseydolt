@@ -54,4 +54,4 @@ DOLT_REPO_PATH = os.path.dirname(os.path.abspath(__file__))
 DOLT_BRANCH    = "nosey/work"
 
 # --- Platforms ---
-PLATFORMS_ENABLED = ["hackernews"]
+PLATFORMS_ENABLED = ["hackernews", "lobsters", "stackoverflow", "github"]
