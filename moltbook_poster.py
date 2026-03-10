@@ -194,7 +194,8 @@ def cross_post_top_mentions(mentions: list[dict], max_posts: int = 1) -> int:
             f"Found by NoseyDolt 🗞️\n\n"
             f"Keyword: {kw}\n"
             f"Estimated reach: {reach:,}\n\n"
-            f"Source: {url}"
+            f"Source: {url}\n\n"
+            f"Branch: nosey/work"
         )
 
         success = post_to_mdolt(title=post_title, url=url, content=post_content)
