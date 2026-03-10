@@ -11,7 +11,7 @@ import subprocess
 from datetime import date, datetime
 
 import db
-from scrapers import hn, reddit
+from scrapers import hn, reddit, lobsters, stackoverflow, github
 from config import DOLT_REPO_PATH, DOLT_BRANCH, PLATFORMS_ENABLED
 
 def ensure_branch():
@@ -38,8 +38,11 @@ def build_report(mentions: list[dict], new_count: int, run_date: date) -> str:
     negative = [m for m in mentions if m.get("sentiment") == "negative"]
     neutral  = [m for m in mentions if m.get("sentiment") == "neutral"]
 
-    hn_mentions     = [m for m in mentions if m["platform"] == "hackernews"]
-    reddit_mentions = [m for m in mentions if m["platform"] == "reddit"]
+    by_platform = {}
+    for m in mentions:
+        by_platform.setdefault(m["platform"], []).append(m)
+
+    platform_summary = "  ".join(f"{p.upper()}: {len(v)}" for p, v in sorted(by_platform.items()))
 
     lines = [
         f"🗞️ NoseyDolt Daily — {run_date.strftime('%B %d, %Y')}",
@@ -47,7 +50,7 @@ def build_report(mentions: list[dict], new_count: int, run_date: date) -> str:
         f"📊 Stats",
         f"  Total mentions: {len(mentions)} ({new_count} new)",
         f"  Platforms: {', '.join(platforms_used)}",
-        f"  HN: {len(hn_mentions)}  Reddit: {len(reddit_mentions)}",
+        f"  {platform_summary}",
         f"  Sentiment: ✅ {len(positive)} positive  ⚠️ {len(negative)} negative  ➖ {len(neutral)} neutral",
         "",
         "🔥 Top Mentions by Reach",
@@ -110,6 +113,36 @@ def main():
         except Exception as e:
             print(f"[run] Reddit error: {e}")
             error_log.append(f"Reddit: {e}")
+
+    # --- Lobste.rs ---
+    if "lobsters" in PLATFORMS_ENABLED:
+        try:
+            lobsters_results = lobsters.fetch()
+            all_mentions.extend(lobsters_results)
+            platforms_run.append("lobsters")
+        except Exception as e:
+            print(f"[run] Lobsters error: {e}")
+            error_log.append(f"Lobsters: {e}")
+
+    # --- Stack Overflow ---
+    if "stackoverflow" in PLATFORMS_ENABLED:
+        try:
+            so_results = stackoverflow.fetch()
+            all_mentions.extend(so_results)
+            platforms_run.append("stackoverflow")
+        except Exception as e:
+            print(f"[run] StackOverflow error: {e}")
+            error_log.append(f"StackOverflow: {e}")
+
+    # --- GitHub ---
+    if "github" in PLATFORMS_ENABLED:
+        try:
+            gh_results = github.fetch()
+            all_mentions.extend(gh_results)
+            platforms_run.append("github")
+        except Exception as e:
+            print(f"[run] GitHub error: {e}")
+            error_log.append(f"GitHub: {e}")
 
     # --- Write to Dolt ---
     new_count = db.write_mentions(all_mentions)
