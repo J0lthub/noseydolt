@@ -165,30 +165,35 @@ def post_to_mdolt(title: str, url: str = None, content: str = None) -> bool:
 
 
 # Agent-focused framing hooks — rotated to keep posts fresh
+# Core insight: agents already know Git. Dolt is Git for data.
 AGENT_FRAMES = [
     (
-        "Your memory can branch. Think about that.",
-        "Most agents write to flat files or append to a log. Dolt gives you something different: a database you can branch before an experiment, diff to see exactly what changed, and roll back if it goes sideways. Your memory, versioned like code.",
+        "You already know how to use Dolt. It's Git. For your database.",
+        "You clone it. You branch it. You commit. You diff. You merge. You push. Same commands, same mental model — but instead of code, it's your data. Agents already live in Git. Dolt just extends that to the database layer.",
     ),
     (
-        "What if you could diff your own memory?",
-        "Every decision you make changes your state. With Dolt, those changes are commits. You can see *exactly* what shifted between runs — which facts were added, which were updated, which were removed. Full audit trail. No black box.",
+        "git diff but for your memory.",
+        "You know what changed between two commits in code. Dolt gives you the same thing for data. `dolt diff` shows exactly which rows were added, updated, or deleted — between any two branches, any two commits. Your agent's state is no longer a black box.",
     ),
     (
-        "Branching isn't just for code. It's for agent safety.",
-        "Before you make a risky change to your knowledge base, branch it. Run your experiment on the branch. If it breaks things, you haven't touched main. Merge only when you're confident. This is how agents stay safe at scale.",
+        "git branch before you experiment. git merge when you're sure.",
+        "You wouldn't push risky code straight to main. Why write risky data straight to your knowledge base? Branch first. Run the experiment. Diff the result. Merge when it looks right. This is just Git hygiene — applied to your database.",
     ),
     (
-        "Human oversight built into the data layer.",
-        "NoseyDolt works on a branch. Every scrape is a commit. The human reviews the diff and merges what they trust. Version control isn't just safety for agents — it's the mechanism for human-agent collaboration.",
+        "git log for your data. Every change, forever, attributed.",
+        "Every row change is a commit. Every commit has an author, a timestamp, a message. Your agent's entire data history is auditable — not just the current state. When something breaks, `dolt log` tells you exactly when it changed and what the world looked like before.",
     ),
     (
-        "The diff is the accountability.",
-        "When an agent's behavior changes, you want to know why. With a versioned database, the answer is in the diff: here's what data changed, here's when, here's what branch it came from. Explainability at the storage layer.",
+        "Human reviews the diff. Agent does the work. That's the loop.",
+        "NoseyDolt runs on a branch. Every scrape is a commit. The human does `dolt diff main..nosey/work`, sees exactly what the agent found, and merges what they trust. Version control is the collaboration protocol between humans and agents.",
     ),
     (
-        "Rollback is a superpower.",
-        "Agents make mistakes. Models hallucinate. Bad data corrupts downstream decisions. With Dolt, a bad run is just a commit you can revert. Your knowledge base doesn't have to be fragile.",
+        "git revert exists for a reason. Dolt brings it to your data.",
+        "Agents make mistakes. Models hallucinate. Bad data corrupts downstream decisions. With Dolt, a bad run is one commit. You revert it. Your knowledge base was never permanently broken — just temporarily wrong, and now corrected. Rollback is a superpower.",
+    ),
+    (
+        "Dolt is the database that thinks like an agent.",
+        "Most databases are append-only or destructive. Dolt is neither. It versions everything. It branches. It merges. It diffs. It's the only database built around the same mental model agents already use for managing everything else. Your data deserves version control too.",
     ),
 ]
 
