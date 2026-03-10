@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 from config import ALL_KEYWORDS, PRIMARY_KEYWORDS, REACH_WEIGHT_UPVOTES, REACH_WEIGHT_COMMENTS
 
-LOBSTERS_SEARCH = "https://lobste.rs/search.json"
+LOBSTERS_NEWEST = "https://lobste.rs/newest.json"
 LOBSTERS_BASE   = "https://lobste.rs"
 LOBSTERS_AVG_VISITORS = 50_000  # rough daily active
 
@@ -42,36 +42,54 @@ def score_sentiment(text: str) -> str:
 
 
 def fetch(lookback_days: int = 1) -> list[dict]:
-    """Fetch Lobste.rs mentions for all keywords."""
+    """Fetch recent Lobste.rs stories and filter by keywords locally."""
+    import time as _time
+    cutoff_ts = _time.time() - (lookback_days * 86400)
+
+    # Fetch pages of newest stories until we hit the cutoff
     seen_ids = set()
-    results  = []
-
-    for keyword in ALL_KEYWORDS:
+    all_stories = []
+    for page in range(1, 6):  # max 5 pages = 125 stories
         try:
-            resp = requests.get(LOBSTERS_SEARCH, params={
-                "q":      keyword,
-                "what":   "stories",
-                "order":  "newest",
-                "page":   1,
-            }, timeout=10, headers={"User-Agent": "NoseyDolt/1.0"})
+            resp = requests.get(LOBSTERS_NEWEST, params={"page": page},
+                                timeout=10, headers={"User-Agent": "NoseyDolt/1.0"})
             resp.raise_for_status()
-            stories = resp.json()
+            page_stories = resp.json()
+            if not page_stories:
+                break
+            # Stop if oldest story on page is beyond cutoff
+            oldest = page_stories[-1].get("created_at", "")
+            if oldest:
+                try:
+                    dt = datetime.fromisoformat(oldest.replace("Z", "+00:00"))
+                    if dt.timestamp() < cutoff_ts:
+                        all_stories.extend(page_stories)
+                        break
+                except Exception:
+                    pass
+            all_stories.extend(page_stories)
+            _time.sleep(1)
         except Exception as e:
-            print(f"[Lobsters] Error fetching '{keyword}': {e}")
-            continue
+            print(f"[Lobsters] Error fetching page {page}: {e}")
+            break
 
-        for item in stories:
+    results = []
+    for item in all_stories:
             uid = f"lobsters:{item.get('short_id', '')}"
             if uid in seen_ids:
                 continue
-            seen_ids.add(uid)
 
             title   = item.get("title") or ""
             content = item.get("description") or ""
-            combined = (title + " " + content).lower()
+            url_str = item.get("url") or ""
+            combined = (title + " " + content + " " + url_str).lower()
 
-            if keyword.lower() not in combined:
+            # Check if any keyword matches
+            matched_kws = [kw for kw in ALL_KEYWORDS if kw.lower() in combined]
+            if not matched_kws:
                 continue
+
+            seen_ids.add(uid)
 
             score      = item.get("score") or 0
             n_comments = item.get("comment_count") or 0
