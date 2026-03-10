@@ -27,6 +27,16 @@ SECONDARY_KEYWORDS = [
     "LLM memory database",
     "agent memory versioning",
     "go-mysql-server",
+    # Agentic AI discourse
+    "agentic memory",
+    "agentic personality",
+    # Data integrity / compliance
+    "source of truth database",
+    "EU AI Act compliance",
+    "AI Act audit trail",
+    # Steve Yegge projects
+    "Steve Yegge Gastown",
+    "Steve Yegge Beads",
 ]
 
 ALL_KEYWORDS = PRIMARY_KEYWORDS + SECONDARY_KEYWORDS
