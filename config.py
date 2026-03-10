@@ -37,6 +37,7 @@ SECONDARY_KEYWORDS = [
     # Steve Yegge + his Dolt-backed projects
     "Steve Yegge",
     "Yegge Gastown",
+    "Yegge Wasteland",
     "Beads",
 ]
 
