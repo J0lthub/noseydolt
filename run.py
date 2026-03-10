@@ -11,7 +11,8 @@ import subprocess
 from datetime import date, datetime
 
 import db
-from scrapers import hn, reddit, lobsters, stackoverflow, github
+from scrapers import hn, reddit, lobsters, stackoverflow, github, moltbook
+from moltbook_poster import cross_post_top_mentions
 from config import DOLT_REPO_PATH, DOLT_BRANCH, PLATFORMS_ENABLED
 
 def ensure_branch():
@@ -144,6 +145,16 @@ def main():
             print(f"[run] GitHub error: {e}")
             error_log.append(f"GitHub: {e}")
 
+    # --- Moltbook ---
+    if "moltbook" in PLATFORMS_ENABLED:
+        try:
+            mb_results = moltbook.fetch()
+            all_mentions.extend(mb_results)
+            platforms_run.append("moltbook")
+        except Exception as e:
+            print(f"[run] Moltbook error: {e}")
+            error_log.append(f"Moltbook: {e}")
+
     # --- Write to Dolt ---
     new_count = db.write_mentions(all_mentions)
     db.write_keyword_triggers(all_mentions)
@@ -161,6 +172,13 @@ def main():
         started_at=started_at,
         finished_at=finished_at,
     )
+
+    # --- Cross-post top find to m/dolt on Moltbook ---
+    if new_count > 0:
+        try:
+            cross_post_top_mentions(all_mentions, max_posts=1)
+        except Exception as e:
+            print(f"[run] Moltbook cross-post error: {e}")
 
     # --- Commit to branch ---
     commit_msg = f"daily: {today} — {len(all_mentions)} mentions found, {new_count} new"
