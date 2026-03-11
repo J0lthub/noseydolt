@@ -33,6 +33,13 @@ def build_report(mentions: list[dict], new_count: int, run_date: date) -> str:
     """Build NoseyDolt's daily digest report."""
     platforms_used = list(set(m["platform"] for m in mentions))
 
+    # Sort feed by posted_at DESC (original publish date), fall back to discovered_at
+    def sort_key(m):
+        ts = m.get("posted_at") or m.get("discovered_at") or ""
+        return ts
+
+    mentions = sorted(mentions, key=sort_key, reverse=True)
+
     top = sorted(mentions, key=lambda m: m.get("potential_reach", 0), reverse=True)[:5]
 
     positive = [m for m in mentions if m.get("sentiment") == "positive"]
@@ -58,11 +65,12 @@ def build_report(mentions: list[dict], new_count: int, run_date: date) -> str:
     ]
 
     for m in top:
-        reach = m.get("potential_reach", 0)
+        reach     = m.get("potential_reach", 0)
         reach_str = f"{reach:,}"
-        title = (m.get("title") or m.get("content") or "")[:80]
+        title     = (m.get("title") or m.get("content") or "")[:80]
+        posted    = (m.get("posted_at") or m.get("discovered_at") or "")[:10]
         lines.append(f"  [{m['platform'].upper()}] {title}")
-        lines.append(f"    ↳ reach ~{reach_str} · {m.get('keyword_hit')} · {m.get('sentiment')}")
+        lines.append(f"    ↳ reach ~{reach_str} · {m.get('keyword_hit')} · {m.get('sentiment')} · {posted}")
         lines.append(f"    {m['url']}")
         lines.append("")
 
