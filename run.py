@@ -184,6 +184,18 @@ def main():
     commit_msg = f"daily: {today} — {len(all_mentions)} mentions found, {new_count} new"
     db.commit(commit_msg)
 
+    # --- Push to DoltHub so the dashboard reads fresh data ---
+    push_result = subprocess.run(
+        ["dolt", "push", "origin", DOLT_BRANCH],
+        cwd=DOLT_REPO_PATH,
+        capture_output=True,
+        text=True,
+    )
+    if push_result.returncode != 0:
+        print(f"[run] DoltHub push warning: {push_result.stderr.strip()}")
+    else:
+        print(f"[run] Pushed {DOLT_BRANCH} to DoltHub ✓")
+
     # --- Print report ---
     report = build_report(all_mentions, new_count, today)
     print("\n" + report)
