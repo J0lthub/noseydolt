@@ -196,6 +196,19 @@ def main():
     else:
         print(f"[run] Pushed {DOLT_BRANCH} to DoltHub ✓")
 
+    # --- Push dashboard to GitHub so GitHub Pages stays current ---
+    git_dir = DOLT_REPO_PATH
+    git_push = subprocess.run(
+        ["git", "push", "origin", "HEAD"],
+        cwd=git_dir,
+        capture_output=True,
+        text=True,
+    )
+    if git_push.returncode != 0:
+        print(f"[run] GitHub push warning: {git_push.stderr.strip()}")
+    else:
+        print(f"[run] Pushed to GitHub ✓")
+
     # --- Print report ---
     report = build_report(all_mentions, new_count, today)
     print("\n" + report)
