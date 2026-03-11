@@ -668,6 +668,17 @@
           <button class="chip green-chip" data-sentiment="positive">Positive</button>
           <button class="chip red-chip"   data-sentiment="negative">Negative</button>
           <button class="chip blue-chip"  data-sentiment="neutral">Neutral</button>
+          <div class="chip-divider"></div>
+          <span class="toolbar-label">Time</span>
+          <button class="chip active" data-time="all">All</button>
+          <button class="chip" data-time="1h">1h</button>
+          <button class="chip" data-time="12h">12h</button>
+          <button class="chip" data-time="24h">24h</button>
+          <button class="chip" data-time="1w">1 week</button>
+          <div class="chip-divider"></div>
+          <span class="toolbar-label">Order</span>
+          <button class="chip active" data-order="desc">Newest</button>
+          <button class="chip" data-order="asc">Oldest</button>
         </div>
         <div id="feed"><div class="state-msg">Loading mentions…</div></div>
       </div>
@@ -754,11 +765,19 @@
     }
 
     let allMentions = [];
-    let pFilter = 'all', sFilter = 'all', searchQ = '';
+    let pFilter = 'all', sFilter = 'all', searchQ = '', tFilter = 'all', sortOrder = 'desc';
+
+    const TIME_MS = { '1h': 3600000, '12h': 43200000, '24h': 86400000, '1w': 604800000 };
 
     function matchesFilters(m) {
       if (pFilter !== 'all' && m.platform !== pFilter) return false;
       if (sFilter !== 'all' && m.sentiment !== sFilter) return false;
+      if (tFilter !== 'all') {
+        const ts = m.posted_at || m.discovered_at;
+        if (!ts) return false;
+        const age = Date.now() - new Date(ts).getTime();
+        if (age > TIME_MS[tFilter]) return false;
+      }
       if (searchQ) {
         const q = searchQ.toLowerCase();
         const haystack = [m.title, m.content, m.keyword_hit, m.author].join(' ').toLowerCase();
@@ -769,7 +788,14 @@
 
     function renderFeed() {
       const feed = document.getElementById('feed');
-      const rows = allMentions.filter(matchesFilters);
+      let rows = allMentions.filter(matchesFilters);
+
+      // Apply sort order
+      rows = rows.slice().sort((a, b) => {
+        const ta = new Date(a.posted_at || a.discovered_at || 0).getTime();
+        const tb = new Date(b.posted_at || b.discovered_at || 0).getTime();
+        return sortOrder === 'asc' ? ta - tb : tb - ta;
+      });
 
       if (!rows.length) {
         feed.innerHTML = `<div class="state-msg">No mentions match this filter.</div>`;
@@ -814,6 +840,22 @@
       document.querySelectorAll('[data-sentiment]').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       sFilter = btn.dataset.sentiment;
+      renderFeed();
+    }));
+
+    // Filter chips — time
+    document.querySelectorAll('[data-time]').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-time]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      tFilter = btn.dataset.time;
+      renderFeed();
+    }));
+
+    // Sort order
+    document.querySelectorAll('[data-order]').forEach(btn => btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-order]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      sortOrder = btn.dataset.order;
       renderFeed();
     }));
 
