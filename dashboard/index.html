@@ -790,7 +790,7 @@
               ${m.author ? `<span class="meta-author">${trunc(m.author, 24)}</span>` : ''}
               <span class="meta-reach">~${fmtReach(m.potential_reach)} reach</span>
               ${m.keyword_hit ? `<span class="meta-keyword">${m.keyword_hit}</span>` : ''}
-              <span class="meta-date">${fmtDate(m.discovered_at)}</span>
+              <span class="meta-date">${fmtDate(m.posted_at || m.discovered_at)}</span>
             </div>
           </div>
           <div class="mention-right">
@@ -847,9 +847,9 @@
       try {
         const mentions = await sql(
           `SELECT id, platform, title, url, sentiment, potential_reach,
-                  keyword_hit, author, discovered_at, relevance
+                  keyword_hit, author, posted_at, discovered_at, relevance
            FROM mentions
-           ORDER BY discovered_at DESC, potential_reach DESC
+           ORDER BY posted_at DESC, potential_reach DESC
            LIMIT 500`
         );
         allMentions = mentions;
@@ -859,7 +859,7 @@
         const negative = mentions.filter(m => m.sentiment === 'negative').length;
         const neutral  = mentions.filter(m => m.sentiment === 'neutral').length;
         const today    = new Date().toISOString().slice(0, 10);
-        const todayN   = mentions.filter(m => (m.discovered_at || '').slice(0, 10) === today).length;
+        const todayN   = mentions.filter(m => (m.posted_at || '').slice(0, 10) === today).length;
         const platforms = [...new Set(mentions.map(m => m.platform).filter(Boolean))];
 
         countUp(document.getElementById('stat-total'),     total);
