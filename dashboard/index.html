@@ -771,6 +771,7 @@
     const TIME_MS = { '1h': 3600000, '12h': 43200000, '24h': 86400000, '1w': 604800000 };
 
     function matchesFilters(m) {
+      if (pFilter === 'all' && m.platform === 'github') return false;
       if (pFilter !== 'all' && m.platform !== pFilter) return false;
       if (sFilter !== 'all' && String(m.sentiment) !== sFilter) return false;
       if (tFilter !== 'all') {
