@@ -665,9 +665,9 @@
           <div class="chip-divider"></div>
           <span class="toolbar-label">Sentiment</span>
           <button class="chip active" data-sentiment="all">All</button>
-          <button class="chip green-chip" data-sentiment="positive">Positive</button>
-          <button class="chip red-chip"   data-sentiment="negative">Negative</button>
-          <button class="chip blue-chip"  data-sentiment="neutral">Neutral</button>
+          <button class="chip green-chip" data-sentiment="2">2</button>
+          <button class="chip red-chip"   data-sentiment="0">0</button>
+          <button class="chip blue-chip"  data-sentiment="1">1</button>
           <div class="chip-divider"></div>
           <span class="toolbar-label">Time</span>
           <button class="chip active" data-time="all">All</button>
@@ -752,9 +752,10 @@
     }
 
     function sentimentPill(s) {
-      if (s === 'positive') return `<span class="sentiment-pill pill-positive">Positive</span>`;
-      if (s === 'negative') return `<span class="sentiment-pill pill-negative">Negative</span>`;
-      return `<span class="sentiment-pill pill-neutral">Neutral</span>`;
+      const v = String(s);
+      if (v === '2') return `<span class="sentiment-pill pill-positive">2</span>`;
+      if (v === '0') return `<span class="sentiment-pill pill-negative">0</span>`;
+      return `<span class="sentiment-pill pill-neutral">1</span>`;
     }
 
     function relevanceDots(r) {
@@ -771,7 +772,7 @@
 
     function matchesFilters(m) {
       if (pFilter !== 'all' && m.platform !== pFilter) return false;
-      if (sFilter !== 'all' && m.sentiment !== sFilter) return false;
+      if (sFilter !== 'all' && String(m.sentiment) !== sFilter) return false;
       if (tFilter !== 'all') {
         const ts = m.posted_at || m.discovered_at;
         if (!ts) return false;
@@ -897,9 +898,9 @@
         allMentions = mentions;
 
         const total    = mentions.length;
-        const positive = mentions.filter(m => m.sentiment === 'positive').length;
-        const negative = mentions.filter(m => m.sentiment === 'negative').length;
-        const neutral  = mentions.filter(m => m.sentiment === 'neutral').length;
+        const positive = mentions.filter(m => String(m.sentiment) === '2').length;
+        const negative = mentions.filter(m => String(m.sentiment) === '0').length;
+        const neutral  = mentions.filter(m => String(m.sentiment) === '1').length;
         const today    = new Date().toISOString().slice(0, 10);
         const todayN   = mentions.filter(m => (m.posted_at || '').slice(0, 10) === today).length;
         const platforms = [...new Set(mentions.map(m => m.platform).filter(Boolean))];

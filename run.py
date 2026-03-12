@@ -48,9 +48,9 @@ def build_report(mentions: list[dict], new_count: int, run_date: date) -> str:
 
     top = sorted(mentions, key=lambda m: m.get("potential_reach", 0), reverse=True)[:5]
 
-    positive = [m for m in mentions if m.get("sentiment") == "positive"]
-    negative = [m for m in mentions if m.get("sentiment") == "negative"]
-    neutral  = [m for m in mentions if m.get("sentiment") == "neutral"]
+    positive = [m for m in mentions if str(m.get("sentiment")) == "2"]
+    negative = [m for m in mentions if str(m.get("sentiment")) == "0"]
+    neutral  = [m for m in mentions if str(m.get("sentiment")) == "1"]
 
     by_platform = {}
     for m in mentions:
@@ -65,7 +65,7 @@ def build_report(mentions: list[dict], new_count: int, run_date: date) -> str:
         f"  Total mentions: {len(mentions)} ({new_count} new)",
         f"  Platforms: {', '.join(platforms_used)}",
         f"  {platform_summary}",
-        f"  Sentiment: ✅ {len(positive)} positive  ⚠️ {len(negative)} negative  ➖ {len(neutral)} neutral",
+        f"  Sentiment: ✅ {len(positive)}  ⚠️ {len(negative)}  ➖ {len(neutral)}",
         "",
         "🔥 Top Mentions by Reach",
     ]
@@ -76,7 +76,7 @@ def build_report(mentions: list[dict], new_count: int, run_date: date) -> str:
         title     = (m.get("title") or m.get("content") or "")[:80]
         posted    = (m.get("posted_at") or m.get("discovered_at") or "")[:10]
         lines.append(f"  [{m['platform'].upper()}] {title}")
-        lines.append(f"    ↳ reach ~{reach_str} · {m.get('keyword_hit')} · {m.get('sentiment')} · {posted}")
+        lines.append(f"    ↳ reach ~{reach_str} · {m.get('keyword_hit')} · {m.get('sentiment', 1)} · {posted}")
         lines.append(f"    {m['url']}")
         lines.append("")
 

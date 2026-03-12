@@ -58,9 +58,9 @@ def score_sentiment(text: str) -> str:
                       "frustrating", "doesn't work", "failed", "error", "crash", "bad", "worse"]
     pos = sum(1 for w in positive_words if w in text_lower)
     neg = sum(1 for w in negative_words if w in text_lower)
-    if pos > neg: return "positive"
-    if neg > pos: return "negative"
-    return "neutral"
+    if pos > neg: return 2
+    if neg > pos: return 0
+    return 1
 
 
 def fetch(lookback_days: int = 1) -> list[dict]:
