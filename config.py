@@ -60,6 +60,12 @@ SECONDARY_KEYWORDS = [
 
 ALL_KEYWORDS = PRIMARY_KEYWORDS + SECONDARY_KEYWORDS
 
+# --- Noise filter — substrings that cause false positives ---
+# Applied post-scrape: any mention whose title+content contains one of these is dropped.
+EXCLUDE_TERMS = [
+    "dolton",   # Chicago suburb, matches "Dolt" as substring
+]
+
 # --- Weighted reach formula weights ---
 REACH_WEIGHT_SHARES   = 15
 REACH_WEIGHT_LIKES    = 0.5

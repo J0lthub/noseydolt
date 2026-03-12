@@ -13,7 +13,7 @@ from datetime import date, datetime
 import db
 from scrapers import hn, reddit, lobsters, stackoverflow, github, moltbook
 from moltbook_poster import cross_post_top_mentions
-from config import DOLT_REPO_PATH, DOLT_BRANCH, PLATFORMS_ENABLED
+from config import DOLT_REPO_PATH, DOLT_BRANCH, PLATFORMS_ENABLED, EXCLUDE_TERMS
 
 def ensure_branch():
     """Make sure we're on the right branch before doing anything."""
@@ -168,6 +168,17 @@ def main():
         except Exception as e:
             print(f"[run] Moltbook error: {e}")
             error_log.append(f"Moltbook: {e}")
+
+    # --- Noise filter ---
+    if EXCLUDE_TERMS:
+        before = len(all_mentions)
+        def _is_noise(m):
+            text = ((m.get("title") or "") + " " + (m.get("content") or "")).lower()
+            return any(term.lower() in text for term in EXCLUDE_TERMS)
+        all_mentions = [m for m in all_mentions if not _is_noise(m)]
+        dropped = before - len(all_mentions)
+        if dropped:
+            print(f"[run] Noise filter dropped {dropped} mention(s)")
 
     # --- Write to Dolt ---
     new_count = db.write_mentions(all_mentions)
