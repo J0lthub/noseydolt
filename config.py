@@ -37,6 +37,25 @@ SECONDARY_KEYWORDS = [
     # Steve Yegge — single catch-all, covers all his projects (Gastown, Wasteland, Beads)
     "Steve Yegge",
     "Yegge",
+    # Temporal / versioned database concepts
+    "temporal database",
+    "time travel query",
+    "database time travel",
+    "bitemporal database",
+    "slowly changing dimension",
+    "database branching",
+    "database versioning",
+    "database diff",
+    "immutable database",
+    # Version control for data
+    "version control database",
+    "git for data",
+    "data version control",
+    "data lineage",
+    "data provenance",
+    "database audit trail",
+    "database rollback",
+    "database changelog",
 ]
 
 ALL_KEYWORDS = PRIMARY_KEYWORDS + SECONDARY_KEYWORDS
