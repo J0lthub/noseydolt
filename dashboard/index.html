@@ -725,7 +725,9 @@
       const r = await fetch('./data.json?t=' + Date.now());
       if (!r.ok) throw new Error('data.json fetch failed: ' + r.status);
       const data = await r.json();
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+      const ts = Date.now();
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts, data }));
+      setCachePill('fresh', ts);
       return data;
     }
 
