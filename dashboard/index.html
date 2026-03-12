@@ -630,21 +630,7 @@
         <div class="stat-value" id="stat-platforms">—</div>
         <div class="stat-sub">active sources</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Positive</div>
-        <div class="stat-value green" id="stat-positive">—</div>
-        <div class="stat-sub">sentiment</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Negative</div>
-        <div class="stat-value red" id="stat-negative">—</div>
-        <div class="stat-sub">sentiment</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Neutral</div>
-        <div class="stat-value" id="stat-neutral">—</div>
-        <div class="stat-sub">sentiment</div>
-      </div>
+
     </div>
 
     <!-- BODY -->
@@ -661,8 +647,11 @@
         </div>
 
         <div class="sidebar-card">
-          <div class="sidebar-heading">Sentiment</div>
-          <div id="sentiment-list"></div>
+          <div class="sidebar-heading sidebar-toggle" onclick="toggleSentiment()" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;">
+            <span>Sentiment</span>
+            <span id="sentiment-chevron" style="font-size:0.7rem;color:var(--text-3);transition:transform 0.2s;">▼</span>
+          </div>
+          <div id="sentiment-list" style="display:none;"></div>
         </div>
 
         <div class="sidebar-card">
@@ -755,6 +744,14 @@
     function bustCache() {
       localStorage.removeItem(CACHE_KEY);
       init();
+    }
+
+    function toggleSentiment() {
+      const list = document.getElementById('sentiment-list');
+      const chevron = document.getElementById('sentiment-chevron');
+      const open = list.style.display !== 'none';
+      list.style.display = open ? 'none' : 'block';
+      chevron.style.transform = open ? '' : 'rotate(180deg)';
     }
 
     const trunc = (s, n) => s && s.length > n ? s.slice(0, n) + '…' : (s || '');
