@@ -789,7 +789,7 @@
       if (pFilter !== 'all' && pFilter !== 'core' && m.platform !== pFilter) return false;
       if (sFilter !== 'all' && String(m.sentiment) !== sFilter) return false;
       if (tFilter !== 'all') {
-        const ts = m.discovered_at || m.posted_at;
+        const ts = m.posted_at || m.discovered_at;
         if (!ts) return false;
         const age = Date.now() - new Date(ts).getTime();
         if (age > TIME_MS[tFilter]) return false;
@@ -917,7 +917,7 @@
         const negative = mentions.filter(m => String(m.sentiment) === '0').length;
         const neutral  = mentions.filter(m => String(m.sentiment) === '1').length;
         const today    = new Date().toISOString().slice(0, 10);
-        const todayN   = mentions.filter(m => (m.discovered_at || '').slice(0, 10) === today).length;
+        const todayN   = mentions.filter(m => (m.posted_at || '').slice(0, 10) === today).length;
         const platforms = [...new Set(mentions.map(m => m.platform).filter(Boolean))];
 
         countUp(document.getElementById('stat-total'),     total);
