@@ -17,16 +17,22 @@ from config import DOLT_REPO_PATH, DOLT_BRANCH, PLATFORMS_ENABLED
 
 def ensure_branch():
     """Make sure we're on the right branch before doing anything."""
-    result = subprocess.run(
-        ["dolt", "branch", "--show-current"],
-        cwd=DOLT_REPO_PATH, capture_output=True, text=True
-    )
-    current = result.stdout.strip()
-    if current != DOLT_BRANCH:
-        subprocess.run(["dolt", "checkout", DOLT_BRANCH], cwd=DOLT_REPO_PATH)
-        print(f"[run] Switched to branch: {DOLT_BRANCH}")
-    else:
-        print(f"[run] On branch: {current}")
+    try:
+        result = subprocess.run(
+            ["dolt", "branch", "--show-current"],
+            cwd=DOLT_REPO_PATH, capture_output=True, text=True, timeout=10
+        )
+        current = result.stdout.strip()
+        if current != DOLT_BRANCH:
+            subprocess.run(
+                ["dolt", "checkout", DOLT_BRANCH],
+                cwd=DOLT_REPO_PATH, timeout=10
+            )
+            print(f"[run] Switched to branch: {DOLT_BRANCH}")
+        else:
+            print(f"[run] On branch: {current}")
+    except subprocess.TimeoutExpired:
+        print("[run] Dolt branch check timed out — continuing anyway")
 
 
 def build_report(mentions: list[dict], new_count: int, run_date: date) -> str:
@@ -192,30 +198,71 @@ def main():
     commit_msg = f"daily: {today} — {len(all_mentions)} mentions found, {new_count} new"
     db.commit(commit_msg)
 
-    # --- Push to DoltHub so the dashboard reads fresh data ---
-    push_result = subprocess.run(
-        ["dolt", "push", "origin", DOLT_BRANCH],
-        cwd=DOLT_REPO_PATH,
-        capture_output=True,
-        text=True,
-    )
-    if push_result.returncode != 0:
-        print(f"[run] DoltHub push warning: {push_result.stderr.strip()}")
-    else:
-        print(f"[run] Pushed {DOLT_BRANCH} to DoltHub ✓")
+    # --- Push work branch to DoltHub ---
+    try:
+        push_result = subprocess.run(
+            ["dolt", "push", "origin", DOLT_BRANCH],
+            cwd=DOLT_REPO_PATH,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if push_result.returncode != 0:
+            print(f"[run] DoltHub push warning: {push_result.stderr.strip()}")
+        else:
+            print(f"[run] Pushed {DOLT_BRANCH} to DoltHub ✓")
+    except subprocess.TimeoutExpired:
+        print("[run] DoltHub push timed out — skipping")
+
+    # --- Merge work branch into main so dashboard picks it up ---
+    # DoltHub SQL API only reads from main; never write directly to main
+    try:
+        subprocess.run(["dolt", "checkout", "main"], cwd=DOLT_REPO_PATH, timeout=10)
+        merge_result = subprocess.run(
+            ["dolt", "merge", DOLT_BRANCH, "-m", f"merge: {DOLT_BRANCH} → main ({today})"],
+            cwd=DOLT_REPO_PATH,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if merge_result.returncode != 0:
+            print(f"[run] Merge warning: {merge_result.stderr.strip()}")
+        else:
+            print(f"[run] Merged {DOLT_BRANCH} → main ✓")
+
+        main_push = subprocess.run(
+            ["dolt", "push", "origin", "main"],
+            cwd=DOLT_REPO_PATH,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if main_push.returncode != 0:
+            print(f"[run] DoltHub main push warning: {main_push.stderr.strip()}")
+        else:
+            print(f"[run] Pushed main to DoltHub ✓ (dashboard updated)")
+
+        # Return to work branch for next run
+        subprocess.run(["dolt", "checkout", DOLT_BRANCH], cwd=DOLT_REPO_PATH, timeout=10)
+    except subprocess.TimeoutExpired:
+        print("[run] Merge/push to main timed out — skipping")
+        subprocess.run(["dolt", "checkout", DOLT_BRANCH], cwd=DOLT_REPO_PATH, timeout=10)
 
     # --- Push dashboard to GitHub so GitHub Pages stays current ---
-    git_dir = DOLT_REPO_PATH
-    git_push = subprocess.run(
-        ["git", "push", "origin", "HEAD"],
-        cwd=git_dir,
-        capture_output=True,
-        text=True,
-    )
-    if git_push.returncode != 0:
-        print(f"[run] GitHub push warning: {git_push.stderr.strip()}")
-    else:
-        print(f"[run] Pushed to GitHub ✓")
+    try:
+        git_push = subprocess.run(
+            ["git", "push", "origin", "HEAD"],
+            cwd=DOLT_REPO_PATH,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if git_push.returncode != 0:
+            print(f"[run] GitHub push warning: {git_push.stderr.strip()}")
+        else:
+            print(f"[run] Pushed to GitHub ✓")
+    except subprocess.TimeoutExpired:
+        print("[run] GitHub push timed out — skipping")
 
     # --- Print report ---
     report = build_report(all_mentions, new_count, today)

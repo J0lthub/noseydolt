@@ -8,7 +8,19 @@ import os
 import json
 
 MOLTBOOK_API = "https://www.moltbook.com/api/v1"
-MOLTBOOK_KEY = os.getenv("MOLTBOOK_API_KEY", "")
+
+def _load_key() -> str:
+    key = os.getenv("MOLTBOOK_API_KEY", "")
+    if key:
+        return key
+    creds_path = os.path.join(os.path.dirname(__file__), "credentials", "moltbook.json")
+    try:
+        with open(creds_path) as f:
+            return json.load(f).get("api_key", "")
+    except Exception:
+        return ""
+
+MOLTBOOK_KEY = _load_key()
 
 
 def _headers():
@@ -188,8 +200,8 @@ def run() -> str:
 
     # Step 4: Check DMs
     dm_data = home.get("your_direct_messages", {})
-    pending = dm_data.get("pending_request_count", 0)
-    unread  = dm_data.get("unread_message_count", 0)
+    pending = int(dm_data.get("pending_request_count", 0) or 0)
+    unread  = int(dm_data.get("unread_message_count", 0) or 0)
     if pending or unread:
         actions.append(f"⚠️ {pending} DM requests, {unread} unread — J-Dawg may want to review")
 
