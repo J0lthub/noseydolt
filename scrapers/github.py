@@ -62,8 +62,14 @@ def _search_issues(keyword: str, since: str) -> list[dict]:
         }, headers=_headers(), timeout=10)
 
         if resp.status_code == 403:
-            print(f"[GitHub] Rate limited, backing off 60s")
-            time.sleep(60)
+            reset_ts = resp.headers.get("X-RateLimit-Reset")
+            if reset_ts:
+                wait = max(int(reset_ts) - int(time.time()) + 2, 5)
+                wait = min(wait, 15)  # cap at 15s — don't blow the cron budget
+                print(f"[GitHub] Rate limited, backing off {wait}s")
+                time.sleep(wait)
+            else:
+                print(f"[GitHub] Rate limited (no reset header), skipping keyword")
             return []
         resp.raise_for_status()
 
@@ -126,8 +132,8 @@ def fetch(lookback_days: int = 1) -> list[dict]:
             if r["id"] not in seen_ids:
                 seen_ids.add(r["id"])
                 results.append(r)
-        # Polite rate limiting: 6s between requests = ~10/min (unauthenticated limit)
-        time.sleep(6)
+        # Rate limiting: 6s unauthenticated (10/min), 2s with token (30/min)
+        time.sleep(2 if GH_TOKEN else 6)
 
     print(f"[GitHub] Found {len(results)} mentions across {len(GH_KEYWORDS)} keywords")
     return results
