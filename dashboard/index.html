@@ -173,6 +173,27 @@
       background: var(--surface);
     }
 
+    .cache-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.65rem;
+      color: var(--text-3);
+      cursor: pointer;
+      padding: 0.25rem 0.5rem;
+      border-radius: 20px;
+      border: 1px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+      white-space: nowrap;
+      user-select: none;
+    }
+    .cache-pill:hover { color: var(--text-1); border-color: var(--border); }
+    .cache-pill.loading { cursor: default; pointer-events: none; }
+    .cache-pill.fresh { color: var(--green); }
+    .cache-pill .spin { display: inline-block; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
     .nav-search-icon {
       position: absolute;
       left: 10px;
@@ -591,6 +612,7 @@
       <div class="live-badge"><span class="live-dot"></span>Live</div>
       <div class="branch-badge">⎇ nosey/work</div>
       <span class="nav-date" id="nav-date">—</span>
+      <span class="cache-pill" id="cache-pill" onclick="bustCache()" title="Click to refresh">—</span>
     </div>
   </nav>
 
@@ -689,15 +711,50 @@
   </div>
 
   <script>
-    const OWNER = 'j0lt', REPO = 'nosey-dolt';
-    const API   = `https://www.dolthub.com/api/v1alpha1/${OWNER}/${REPO}`;
-    const BRANCH = 'nosey/work';
+    const CACHE_KEY = 'noseydolt_data';
+    const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
 
-    async function sql(q) {
-      const r = await fetch(`${API}?q=${encodeURIComponent(q)}&branch=${encodeURIComponent(BRANCH)}`);
-      const d = await r.json();
-      if (d.query_execution_status !== 'Success') throw new Error(d.query_execution_message);
-      return d.rows;
+    function setCachePill(state, ts) {
+      const pill = document.getElementById('cache-pill');
+      if (!pill) return;
+      if (state === 'loading') {
+        pill.className = 'cache-pill loading';
+        pill.innerHTML = '<span class="spin">↻</span> Refreshing…';
+      } else if (state === 'fresh') {
+        pill.className = 'cache-pill fresh';
+        pill.innerHTML = '✓ Live';
+        setTimeout(() => setCachePill('cached', ts || Date.now()), 2000);
+      } else {
+        const age = ts ? Math.round((Date.now() - ts) / 60000) : null;
+        pill.className = 'cache-pill';
+        pill.innerHTML = age !== null ? `↻ Updated ${age}m ago` : '↻ Refresh';
+      }
+    }
+
+    async function fetchData() {
+      setCachePill('loading');
+      const r = await fetch('./data.json?t=' + Date.now());
+      if (!r.ok) throw new Error('data.json fetch failed: ' + r.status);
+      const data = await r.json();
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
+      return data;
+    }
+
+    async function loadData() {
+      try {
+        const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null');
+        if (cached && (Date.now() - cached.ts) < CACHE_TTL) {
+          setCachePill('cached', cached.ts);
+          return cached.data;
+        }
+      } catch {}
+      const data = await fetchData();
+      return data;
+    }
+
+    function bustCache() {
+      localStorage.removeItem(CACHE_KEY);
+      init();
     }
 
     const trunc = (s, n) => s && s.length > n ? s.slice(0, n) + '…' : (s || '');
@@ -903,14 +960,9 @@
 
     async function init() {
       try {
-        const mentions = await sql(
-          `SELECT id, platform, title, url, sentiment, potential_reach,
-                  keyword_hit, author, posted_at, discovered_at, relevance
-           FROM mentions
-           ORDER BY posted_at DESC, potential_reach DESC
-           LIMIT 500`
-        );
+        const { mentions, daily_runs: runs, generated_at } = await loadData();
         allMentions = mentions;
+        const genTs = generated_at ? new Date(generated_at).getTime() : null;
 
         const total    = mentions.length;
         const positive = mentions.filter(m => String(m.sentiment) === '2').length;
@@ -963,13 +1015,7 @@
 
         // Run history
         try {
-          const runs = await sql(
-            `SELECT run_date, mentions_found, new_mentions, status
-             FROM daily_runs
-             ORDER BY run_date DESC
-             LIMIT 7`
-          );
-          document.getElementById('run-history').innerHTML = runs.length
+          document.getElementById('run-history').innerHTML = runs && runs.length
             ? runs.map(r => `
                 <div class="run-row">
                   <span class="run-date">${(r.run_date || '').slice(0, 10)}</span>

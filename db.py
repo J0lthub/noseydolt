@@ -3,6 +3,8 @@ Dolt database writer for NoseyDolt.
 Writes mentions to the nosey/work branch.
 """
 import subprocess
+import json
+import os
 from datetime import date, datetime
 
 from config import DOLT_REPO_PATH, DOLT_BRANCH
@@ -123,6 +125,73 @@ VALUES (
   {_esc(str(started_at) if started_at else None)},
   {_esc(str(finished_at) if finished_at else None)}
 );""")
+
+
+def export_dashboard_json() -> dict:
+    """
+    Pull all mentions + recent runs from Dolt and return as a dict
+    suitable for writing to dashboard/data.json.
+    """
+    # --- Mentions ---
+    mentions_raw = _sql("""
+SELECT id, platform, title, url, sentiment, potential_reach,
+       keyword_hit, author, posted_at, discovered_at, relevance
+FROM mentions
+ORDER BY posted_at DESC, potential_reach DESC
+LIMIT 2000;
+""")
+    mentions = []
+    headers = None
+    for line in mentions_raw.split("\n"):
+        line = line.strip()
+        if not line or line.startswith("+"):
+            continue
+        cols = [c.strip() for c in line.split("|") if c.strip()]
+        if headers is None:
+            headers = cols
+            continue
+        if len(cols) == len(headers):
+            row = dict(zip(headers, cols))
+            # Normalize NULLs
+            for k, v in row.items():
+                if v == "NULL":
+                    row[k] = None
+            mentions.append(row)
+
+    # --- Daily runs ---
+    runs_raw = _sql("""
+SELECT run_date, mentions_found, new_mentions, status
+FROM daily_runs
+ORDER BY run_date DESC
+LIMIT 7;
+""")
+    runs = []
+    headers = None
+    for line in runs_raw.split("\n"):
+        line = line.strip()
+        if not line or line.startswith("+"):
+            continue
+        cols = [c.strip() for c in line.split("|") if c.strip()]
+        if headers is None:
+            headers = cols
+            continue
+        if len(cols) == len(headers):
+            runs.append(dict(zip(headers, cols)))
+
+    return {
+        "generated_at": datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "mentions": mentions,
+        "daily_runs": runs,
+    }
+
+
+def write_dashboard_json():
+    """Export data and write to dashboard/data.json."""
+    data = export_dashboard_json()
+    out_path = os.path.join(DOLT_REPO_PATH, "dashboard", "data.json")
+    with open(out_path, "w") as f:
+        json.dump(data, f, separators=(",", ":"))
+    print(f"[DB] Wrote dashboard/data.json ({len(data['mentions'])} mentions, {len(data['daily_runs'])} runs)")
 
 
 def commit(message: str):

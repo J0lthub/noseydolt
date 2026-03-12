@@ -259,6 +259,9 @@ def main():
         print("[run] Merge/push to main timed out — skipping")
         subprocess.run(["dolt", "checkout", DOLT_BRANCH], cwd=DOLT_REPO_PATH, timeout=10)
 
+    # --- Generate static dashboard data for GitHub Pages ---
+    db.write_dashboard_json()
+
     # --- Push dashboard to GitHub so GitHub Pages stays current ---
     try:
         git_push = subprocess.run(
