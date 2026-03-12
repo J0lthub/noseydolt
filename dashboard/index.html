@@ -471,6 +471,7 @@
     .tag-stackoverflow{ background: var(--orange-bg);   color: #F48024; }
     .tag-lobsters     { background: var(--red-bg);      color: #C44; }
     .tag-moltbook     { background: var(--purple-bg);   color: var(--purple); }
+    .tag-core         { background: rgba(0,0,0,0.06);   color: #888; font-style: italic; }
 
     .meta-reach {
       font-size: 0.68rem;
@@ -662,6 +663,7 @@
           <button class="chip" data-filter="stackoverflow">SO</button>
           <button class="chip" data-filter="lobsters">Lobste.rs</button>
           <button class="chip" data-filter="moltbook">Moltbook</button>
+          <button class="chip" data-filter="core">Core</button>
           <div class="chip-divider"></div>
           <span class="toolbar-label">Sentiment</span>
           <button class="chip active" data-sentiment="all">All</button>
@@ -745,7 +747,10 @@
       moltbook:      'MB',
     };
 
-    function platformTag(p) {
+    function platformTag(p, url) {
+      if (p === 'github' && isCoreRepo(url)) {
+        return `<span class="meta-tag tag-core">core</span>`;
+      }
       const label = PLATFORM_SHORT[p] || (p || '?').toUpperCase().slice(0, 3);
       const cls   = `tag-${p || 'github'}`;
       return `<span class="meta-tag ${cls}">${label}</span>`;
@@ -770,9 +775,18 @@
 
     const TIME_MS = { '1h': 3600000, '12h': 43200000, '24h': 86400000, '1w': 604800000 };
 
+    const CORE_ORGS = ['steveyegge', 'dolthub'];
+    function isCoreRepo(url) {
+      if (!url) return false;
+      return CORE_ORGS.some(org => url.includes(`github.com/${org}/`));
+    }
+
     function matchesFilters(m) {
+      const core = m.platform === 'github' && isCoreRepo(m.url);
       if (pFilter === 'all' && m.platform === 'github') return false;
-      if (pFilter !== 'all' && m.platform !== pFilter) return false;
+      if (pFilter === 'github' && core) return false;
+      if (pFilter === 'core' && !core) return false;
+      if (pFilter !== 'all' && pFilter !== 'core' && m.platform !== pFilter) return false;
       if (sFilter !== 'all' && String(m.sentiment) !== sFilter) return false;
       if (tFilter !== 'all') {
         const ts = m.posted_at || m.discovered_at;
@@ -814,7 +828,7 @@
               </a>
             </div>
             <div class="mention-meta">
-              ${platformTag(m.platform)}
+              ${platformTag(m.platform, m.url)}
               ${m.author ? `<span class="meta-author">${trunc(m.author, 24)}</span>` : ''}
               <span class="meta-reach">~${fmtReach(m.potential_reach)} reach</span>
               ${m.keyword_hit ? `<span class="meta-keyword">${m.keyword_hit}</span>` : ''}
