@@ -336,13 +336,59 @@ def _save_posted_url(url: str):
         json.dump(data, f)
 
 
+def _days_since_last_post() -> int:
+    """Return how many days since the last post was made. Returns 999 if unknown."""
+    try:
+        with open(_FRAME_STATE_PATH) as f:
+            data = json.load(f)
+        last = data.get("last_posted_date")
+        if not last:
+            return 999
+        from datetime import date
+        delta = date.today() - date.fromisoformat(last)
+        return delta.days
+    except Exception:
+        return 999
+
+def _record_post_date():
+    try:
+        with open(_FRAME_STATE_PATH) as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+    from datetime import date
+    data["last_posted_date"] = date.today().isoformat()
+    with open(_FRAME_STATE_PATH, "w") as f:
+        json.dump(data, f)
+
+
+# Minimum days between posts — avoids looking like a spam account
+MIN_DAYS_BETWEEN_POSTS = 7
+
+
 def cross_post_top_mentions(mentions: list[dict], max_posts: int = 1) -> int:
     """
-    Post one original editorial piece to m/dolt per daily run.
-    Content rotates through ORIGINAL_POSTS — each a distinct angle on why Dolt
-    is valuable for AI agents. No templates, no mention-wrapping, no repeats.
+    Post at most once per week to m/dolt — only when there's a genuinely
+    interesting find worth sharing. Rotating original posts; no Dolt marketing drip.
     Returns count of successful posts.
     """
+    days_since = _days_since_last_post()
+    if days_since < MIN_DAYS_BETWEEN_POSTS:
+        print(f"[MoltbookPoster] Skipping — posted {days_since}d ago (min {MIN_DAYS_BETWEEN_POSTS}d between posts)")
+        return 0
+
+    # Only post when today's scrape surfaced something worth mentioning
+    # (high-relevance HN or GitHub mention — a real signal, not noise)
+    interesting = [
+        m for m in mentions
+        if m.get("platform") in ("hackernews", "github")
+        and int(m.get("relevance", 0)) >= 4
+        and m.get("url")
+    ]
+    if not interesting:
+        print(f"[MoltbookPoster] Skipping — no high-relevance mentions found today")
+        return 0
+
     post_title, post_body = _next_post()
 
     # Skip placeholder entries (e.g. index 0, posted manually)
@@ -351,6 +397,8 @@ def cross_post_top_mentions(mentions: list[dict], max_posts: int = 1) -> int:
         return 0
 
     success = post_to_mdolt(title=post_title, content=post_body)
+    if success:
+        _record_post_date()
     count = 1 if success else 0
-    print(f"[MoltbookPoster] Posted {count}/1 original editorial to m/dolt")
+    print(f"[MoltbookPoster] Posted {count}/1 editorial to m/dolt")
     return count
