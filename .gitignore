@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 *.pyo
 .DS_Store
+.moltbook_frame_state.json
+nosey_dolt.db

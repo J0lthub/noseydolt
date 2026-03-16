@@ -262,8 +262,28 @@ def main():
     # --- Generate static dashboard data for GitHub Pages ---
     db.write_dashboard_json()
 
-    # --- Push dashboard to GitHub so GitHub Pages stays current ---
+    # --- Commit dashboard/data.json to git + push to GitHub Pages ---
     try:
+        subprocess.run(
+            ["git", "add", "dashboard/data.json"],
+            cwd=DOLT_REPO_PATH, capture_output=True, text=True, timeout=10,
+        )
+        git_commit = subprocess.run(
+            ["git", "commit", "-m",
+             f"chore: update dashboard data.json — {today} run ({len(all_mentions)} mentions, {new_count} new)"],
+            cwd=DOLT_REPO_PATH,
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if git_commit.returncode != 0:
+            if "nothing to commit" in git_commit.stdout + git_commit.stderr:
+                print("[run] Git: nothing new to commit for dashboard/data.json")
+            else:
+                print(f"[run] Git commit warning: {git_commit.stderr.strip()}")
+        else:
+            print(f"[run] Git committed dashboard/data.json ✓")
+
         git_push = subprocess.run(
             ["git", "push", "origin", "HEAD"],
             cwd=DOLT_REPO_PATH,

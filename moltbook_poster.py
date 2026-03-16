@@ -5,7 +5,11 @@ Handles Moltbook's AI verification challenge (obfuscated math puzzle).
 """
 import re
 import os
+import json
 import requests
+
+# Persists across runs so we never repeat a frame until all are exhausted
+_FRAME_STATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".moltbook_frame_state.json")
 
 MOLTBOOK_API  = "https://www.moltbook.com/api/v1"
 MOLTBOOK_KEY  = os.getenv("MOLTBOOK_API_KEY", "")
@@ -197,21 +201,57 @@ AGENT_FRAMES = [
     ),
 ]
 
-_frame_index = 0
+def _load_frame_index() -> int:
+    try:
+        with open(_FRAME_STATE_PATH) as f:
+            return int(json.load(f).get("index", 0))
+    except Exception:
+        return 0
+
+def _save_frame_index(idx: int):
+    with open(_FRAME_STATE_PATH, "w") as f:
+        json.dump({"index": idx}, f)
 
 def _next_frame() -> tuple[str, str]:
-    global _frame_index
-    frame = AGENT_FRAMES[_frame_index % len(AGENT_FRAMES)]
-    _frame_index += 1
+    idx = _load_frame_index()
+    frame = AGENT_FRAMES[idx % len(AGENT_FRAMES)]
+    _save_frame_index(idx + 1)
+    print(f"[MoltbookPoster] Using frame {idx % len(AGENT_FRAMES) + 1}/{len(AGENT_FRAMES)}: '{frame[0][:50]}…'")
     return frame
+
+
+def _load_posted_urls() -> set:
+    """Load set of URLs already cross-posted, so we never post the same source twice."""
+    try:
+        with open(_FRAME_STATE_PATH) as f:
+            data = json.load(f)
+            return set(data.get("posted_urls", []))
+    except Exception:
+        return set()
+
+def _save_posted_url(url: str):
+    try:
+        with open(_FRAME_STATE_PATH) as f:
+            data = json.load(f)
+    except Exception:
+        data = {}
+    urls = list(set(data.get("posted_urls", [])))
+    if url not in urls:
+        urls.append(url)
+    data["posted_urls"] = urls
+    with open(_FRAME_STATE_PATH, "w") as f:
+        json.dump(data, f)
 
 
 def cross_post_top_mentions(mentions: list[dict], max_posts: int = 1) -> int:
     """
     Cross-post the top N mentions from today's scrape into m/dolt.
     Frames each post for an AI agent audience — emphasizing Dolt's safety superpowers.
+    Never repeats the same frame or source URL.
     Returns count of successful posts.
     """
+    already_posted = _load_posted_urls()
+
     # Only cross-post from HN and GitHub — high signal sources
     eligible = [
         m for m in mentions
@@ -219,6 +259,7 @@ def cross_post_top_mentions(mentions: list[dict], max_posts: int = 1) -> int:
         and m.get("relevance", 0) >= 3
         and m.get("url")
         and m.get("title")
+        and m.get("url") not in already_posted
     ]
 
     # Sort by relevance then reach
@@ -252,6 +293,7 @@ def cross_post_top_mentions(mentions: list[dict], max_posts: int = 1) -> int:
         success = post_to_mdolt(title=post_title, url=url, content=post_content)
         if success:
             posted += 1
+            _save_posted_url(url)
 
     print(f"[MoltbookPoster] Cross-posted {posted}/{len(eligible[:max_posts])} mentions to m/dolt")
     return posted
